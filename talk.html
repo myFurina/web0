@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交流社区 - TechShare</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/comment.css">
+    <style>
+        /* --- 核心修复：文字可见性与布局 --- */
+        textarea#commentContent {
+            color: var(--text-main);
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .comment-item {
+            display: flex;
+            gap: 15px;
+            padding: 20px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 15px;
+            color: var(--text-main);
+        }
+
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--primary-purple);
+        }
+
+        .comment-body { flex: 1; }
+        .comment-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+        .comment-user-name { font-weight: bold; color: var(--accent-blue); }
+        .comment-time { color: var(--text-gray); font-size: 0.85rem; }
+
+        /* .nav-item { position: relative; display: flex; align-items: center; height: 70px; }
+        .has-dropdown:hover .dropdown { display: block; animation: fadeInQuick 0.15s ease-out; }
+        .dropdown {
+            position: absolute; top: 70px; right: 0;
+            background: var(--card-bg); border: 1px solid var(--border-color);
+            border-radius: 0 0 12px 12px; padding: 8px 0;
+            display: none; box-shadow: 0 10px 25px rgba(0,0,0,0.2); min-width: 150px; z-index: 1001;
+        }
+        .dropdown li a { color: var(--text-main); padding: 10px 20px; display: block; } */
+
+        .user-badge {
+            background: var(--input-bg); padding: 5px 15px; border-radius: 20px;
+            font-size: 0.85rem; border: 1px solid var(--border-color); color: var(--accent-blue); font-weight: bold;
+        }
+        @keyframes fadeInQuick { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <h1>🌀 Tech<span>Share</span></h1>
+            <nav>
+                <ul>
+                    <li><a href="index.html">首页</a></li>
+                    <li class="nav-item has-dropdown">
+                        <a href="javascript:;">资源共享▾</a>
+                        <ul class="dropdown">
+                            <li><a href="source.html">资源查看</a></li>
+                            <li><a href="share.html">资源发布</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item has-dropdown">
+                        <a href="javascript:;" class="active">交流社区▾</a>
+                        <ul class="dropdown">
+                            <li><a href="talk.html">前往吐槽</a></li>
+                            <li><a href="forum.html">前往论坛</a></li>
+                        </ul>
+                    </li>
+                    <li id="adminEntrance" style="display:none;"><a href="admin.html" style="font-weight:bold;">⚙️ 管理后台</a></li>
+                    <li class="user-controls nav-item has-dropdown">
+                        <a href="javascript:;"><span id="userInfo" class="user-badge"></span></a>
+                        <ul class="dropdown"><li><a href="mine.html">个人中心</a></li></ul>
+                    </li>
+                    <li class="user-controls">
+                        <span id="logoutBtn" style="display:none;"><a href="javascript:void(0)" onclick="logout()" class="logout-link" style=" text-decoration:none;">退出</a></span>
+                    </li>
+                    <button id="themeToggle" class="theme-toggle">🌙</button>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="post-card" style="background:var(--card-bg); padding:20px; border-radius:12px; border:1px solid var(--border-color);">
+            <textarea id="commentContent" placeholder="在此分享你的技术见解..."></textarea>
+            <button class="post-btn" onclick="submitComment()" style="background: var(--primary-purple); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; float: right; margin-top: 10px;">发布动态</button>
+            <div style="clear: both;"></div>
+        </div>
+
+        <div id="commentList" class="comment-list" style="margin-top:20px;">
+            <div class="loading">正在同步社区动态...</div>
+        </div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/escape.js"></script>
+    <script>
+        const API_URL = '/api/comments';
+        const esc = (v) => (window.escapeHtml ? window.escapeHtml(v) : String(v == null ? '' : v));
+
+        // 列表状态必须先声明：initAuth 里立即调 loadComments，用到它们（否则 TDZ 报错导致首屏空白）
+        let commentPage = 1;
+        const COMMENT_PAGE_SIZE = 20;
+        let commentDone = false;
+
+        (function initAuth() {
+            const username = localStorage.getItem('username');
+            if (localStorage.getItem('isLogin') !== 'true') { window.location.href = 'login.html'; return; }
+            document.getElementById('userInfo').innerText = '👤 ' + (username || '未知用户');
+            document.getElementById('logoutBtn').style.display = 'inline';
+            if (localStorage.getItem('role') === 'admin') document.getElementById('adminEntrance').style.display = 'block';
+            
+            loadComments(); // 初始化加载动态
+        })();
+
+        async function loadComments(reset) {
+            const list = document.getElementById('commentList');
+            if (reset) { commentPage = 1; commentDone = false; }
+            if (commentDone) return;
+            try {
+                const json = window.API
+                    ? await window.API.get(API_URL, { page: commentPage, limit: COMMENT_PAGE_SIZE })
+                    : await fetch(`${API_URL}?page=${commentPage}&limit=${COMMENT_PAGE_SIZE}`).then(r => r.json());
+                const items = json.data || [];
+                list.innerHTML = (commentPage > 1 ? list.innerHTML : '') + items.map(item => `
+                        <div class="comment-item">
+                            <img src="/api/user/avatar?username=${encodeURIComponent(item.username)}" loading="lazy" decoding="async" width="50" height="50" class="user-avatar" onerror="this.src='css/default-avatar.png'">
+                            <div class="comment-body">
+                                <div class="comment-header">
+                                    <span class="comment-user-name">${esc(item.username)}</span>
+                                    <span class="comment-time">${esc(new Date(item.create_time).toLocaleString())}</span>
+                                </div>
+                                <div class="comment-text">${esc(item.content)}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                if (items.length === 0 && commentPage === 1) {
+                    list.innerHTML = '<div class="loading">暂无动态，快来抢沙发吧！</div>';
+                }
+                if (items.length < COMMENT_PAGE_SIZE) commentDone = true;
+                else commentPage++;
+                ensureCommentMoreBtn();
+            } catch (err) {
+                console.error("加载失败", err);
+                list.innerHTML = '<div class="loading">❌ 加载失败，<a href="javascript:location.reload()" style="color:var(--accent-blue);">点击重试</a></div>';
+            }
+        }
+
+        function ensureCommentMoreBtn() {
+            let btn = document.getElementById('commentMoreBtn');
+            if (commentDone) { if (btn) btn.remove(); return; }
+            if (!btn) {
+                btn = document.createElement('button');
+                btn.id = 'commentMoreBtn';
+                btn.textContent = '加载更多';
+                btn.style.cssText = 'display:block;margin:20px auto;padding:10px 28px;cursor:pointer;';
+                btn.onclick = () => loadComments(false);
+                document.getElementById('commentList').after(btn);
+            }
+        }
+
+        async function submitComment() {
+            const content = document.getElementById('commentContent').value.trim();
+            if(!content) return alert("内容不能为空");
+
+            try {
+                const res = window.API
+                    ? await window.API.send('POST', API_URL, { content })
+                    : await fetch(API_URL, {
+                        method: 'POST',
+                        headers: Object.assign({ 'Content-Type': 'application/json' },
+                            (() => { try { const t = localStorage.getItem('token'); return t ? { 'Authorization': 'Bearer ' + t } : {}; } catch (_) { return {}; } })()),
+                        body: JSON.stringify({ content })
+                    });
+                if (res && res.code !== undefined && res.code !== 200) { alert('发布失败：' + (res.msg || '请重试')); return; }
+                document.getElementById('commentContent').value = '';
+                loadComments(true); // 刷新列表
+            } catch (err) {
+                if (err && (err.status === 401 || err.status === 403)) alert('登录已过期，请重新登录');
+                else alert('发布失败，请检查网络后重试');
+            }
+        }
+
+        async function __doLogout(confirmMsg, target) {
+            if (!confirm(confirmMsg)) return;
+            try { await fetch('/api/logout', { method: 'POST' }); } catch (_) {}
+            localStorage.clear();
+            window.location.href = target || 'login.html';
+        }
+        function logout() { __doLogout('确定安全退出吗？'); }
+
+        // 主题切换逻辑保持不变...
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        html.setAttribute('data-theme', savedTheme);
+        themeToggle.textContent = savedTheme === 'light' ? '☀️' : '🌙';
+        themeToggle.onclick = () => {
+            const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', next);
+            themeToggle.textContent = next === 'light' ? '☀️' : '🌙';
+            localStorage.setItem('theme', next);
+        };
+    </script>
+</body>
+</html>

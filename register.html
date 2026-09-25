@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册 - TechShare</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            transition: background-color 0.3s;
+        }
+
+        .register-card {
+            background: var(--card-bg);
+            width: 100%;
+            max-width: 420px;
+            padding: 40px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            position: relative;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .theme-toggle-wrapper {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+
+        .logo-area {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .logo-icon {
+            font-size: 2.5rem;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .logo-text {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin: 0;
+        }
+
+        .logo-text span {
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        h2 {
+            text-align: center;
+            margin: 0 0 10px 0;
+            font-size: 1.5rem;
+            color: var(--text-main);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-gray);
+            font-size: 0.9rem;
+            margin-bottom: 30px;
+        }
+
+        .subtitle a {
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .input-group { margin-bottom: 20px; }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            color: var(--text-gray);
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-main);
+            box-sizing: border-box;
+            font-size: 1rem;
+            transition: 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary-purple);
+            box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.15);
+        }
+
+        .register-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: 0.3s;
+        }
+
+        .register-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3);
+            filter: brightness(1.1);
+        }
+
+        .register-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .footer-link {
+            text-align: center;
+            font-size: 0.85rem;
+            margin-top: 25px;
+            color: var(--text-gray);
+        }
+
+        .footer-link a {
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+<div class="register-card">
+    <div class="theme-toggle-wrapper">
+        <button id="themeToggle" class="theme-toggle" style="background:none; border:none; cursor:pointer; font-size:1.2rem;">🌙</button>
+    </div>
+
+    <div class="logo-area">
+        <span class="logo-icon">🌀</span>
+        <h1 class="logo-text">Tech<span>Share</span></h1>
+    </div>
+
+    <h2>创建新账号</h2>
+
+
+    <form id="registerForm">
+        <div class="input-group">
+            <label>用户名 *</label>
+            <input type="text" id="regUsername" placeholder="选择一个独特的用户名" required autocomplete="username">
+        </div>
+        <div class="input-group">
+            <label>密码 *</label>
+            <input type="password" id="regPassword" placeholder="设置您的登录密码" required autocomplete="new-password">
+        </div>
+        <div class="input-group">
+            <label>验证码 *</label>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <input type="text" id="regCaptcha" placeholder="看图填字符" required autocomplete="off" style="flex:1;">
+                <span id="captchaImg" title="看不清？点击换一张" style="cursor:pointer; border:1px solid var(--border-color); border-radius:12px; overflow:hidden; display:inline-flex; height:48px; min-width:120px; align-items:center; justify-content:center; background:var(--input-bg);"></span>
+            </div>
+        </div>
+        <button type="submit" id="submitBtn" class="register-btn">立即注册</button>
+    </form>
+
+    <p class="footer-link">
+        已经有账号了? <a href="login.html">前往登录</a>
+    </p>
+</div>
+
+<script>
+    const registerForm = document.getElementById('registerForm');
+    const submitBtn = document.getElementById('submitBtn');
+    let captchaId = '';
+
+    async function loadCaptcha() {
+        try {
+            const r = await fetch('/api/captcha').then((x) => x.json());
+            if (r.code === 200) {
+                captchaId = r.data.id;
+                document.getElementById('captchaImg').innerHTML = r.data.svg;
+            }
+        } catch (_) {}
+    }
+    document.getElementById('captchaImg').addEventListener('click', loadCaptcha);
+    loadCaptcha();
+
+    registerForm.onsubmit = async function(e) {
+        e.preventDefault();
+
+        // UI 状态反馈
+        submitBtn.disabled = true;
+        submitBtn.innerText = '正在为您创建账号...';
+
+        const username = document.getElementById('regUsername').value;
+        const password = document.getElementById('regPassword').value;
+        const captchaText = document.getElementById('regCaptcha').value;
+
+        try {
+            const response = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password, captchaId, captchaText })
+            });
+            const res = await response.json();
+
+            if(res.code === 200) {
+                alert('注册成功！欢迎加入 TechShare，请登录您的账号。');
+                window.location.href = 'login.html';
+            } else {
+                alert('注册失败：' + (res.msg || '用户名可能已被占用'));
+                loadCaptcha();
+                document.getElementById('regCaptcha').value = '';
+                submitBtn.disabled = false;
+                submitBtn.innerText = '立即注册';
+            }
+        } catch (err) {
+            alert('服务器连接失败，请稍后再试');
+            submitBtn.disabled = false;
+            submitBtn.innerText = '立即注册';
+        }
+    };
+
+    // --- 主题切换逻辑 ---
+    const themeToggle = document.getElementById('themeToggle');
+    const html = document.documentElement;
+
+    const initTheme = () => {
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        html.setAttribute('data-theme', savedTheme);
+        themeToggle.textContent = savedTheme === 'light' ? '☀️' : '🌙';
+    }
+
+    themeToggle.addEventListener('click', () => {
+        const isLight = html.getAttribute('data-theme') === 'light';
+        const nextTheme = isLight ? 'dark' : 'light';
+        
+        html.setAttribute('data-theme', nextTheme);
+        themeToggle.textContent = nextTheme === 'light' ? '☀️' : '🌙';
+        localStorage.setItem('theme', nextTheme);
+    });
+
+    initTheme();
+</script>
+
+</body>
+</html>

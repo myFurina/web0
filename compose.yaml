@@ -1,0 +1,85 @@
+# TechShare 本地运行（手动 podman 命令见 启动说明.md；本文件备用，组网与之一致）
+# 注意：compose 方式已滞后于 start.sh ——不会渲染 nginx.conf 的 __S3_*__ 占位，
+# 用 compose 前请先手动按 .env 渲染，或改回直连。如不确定，用 ./start.sh。
+# 浏览器开 http://localhost:8080/ ；直连后端调试用 http://localhost:3000/
+# DB 初始化：首次启动 mysql 容器会自动执行 ./backend/schema.sql
+# R2 稍后配：在 .env 里填 R2_* 后重建 app 即可
+#
+# 组网说明（校园网/VPN 漫游安全）：
+# - 自定义网段 192.168.77.0/24（冷门，避开校园 10/8、宿舍 192.168.0/1、VPN 段）；
+#   换网段只改下面 networks 一处 + nginx.conf 的 resolver 一行。
+# - nginx 与 app 共享网络命名空间（network_mode: service:app），upstream 走 127.0.0.1，
+#   零 IP 字面量、长连接不断，网段随便换不断流。8080 发布在 app 上。
+
+services:
+  mysql:
+    image: docker.io/library/mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-change-me}
+      MYSQL_DATABASE: tech_share
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./backend/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro,z
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${DB_PASSWORD:-change-me}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - techshare
+
+  redis:
+    image: docker.io/library/redis:alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru", "--requirepass", "${REDIS_PASSWORD:-techshare-local}"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-techshare-local}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - techshare
+
+  app:
+    build:
+      context: .
+      dockerfile: Containerfile
+    restart: unless-stopped
+    env_file: [${HOME}/.config/techshare/.env]
+    environment:
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_NAME: tech_share
+      CLUSTER: "1"
+      REDIS_URL: redis://:${REDIS_PASSWORD:-techshare-local}@redis:6379
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    expose: ["3000"]
+    ports: ["127.0.0.1:8080:80"]
+    networks:
+      - techshare
+
+  nginx:
+    image: localhost/techshare-nginx:latest
+    restart: unless-stopped
+    network_mode: "service:app"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro,z
+      - .:/usr/share/web:ro,z
+    depends_on:
+      - app
+
+networks:
+  techshare:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.77.0/24
+
+volumes:
+  mysql-data:

@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>技术资源共享大厅 - TechShare</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/slider.css">
+    <style>
+        /* 资源卡片样式 */
+        .resource-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 24px;
+            margin-top: 20px;
+        }
+        
+        .resource-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .resource-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-color: var(--primary-purple);
+        }
+        
+        .resource-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary-purple), var(--accent-blue));
+            transform: scaleX(0);
+            transition: transform 0.3s;
+        }
+        
+        .resource-card:hover::before {
+            transform: scaleX(1);
+        }
+        
+        .resource-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .resource-category {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(139, 92, 246, 0.15);
+            color: var(--primary-purple);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        
+        .resource-description {
+            color: var(--text-gray);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin-bottom: 16px;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .resource-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.8rem;
+            color: var(--text-gray);
+        }
+        
+        .resource-uploader {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .resource-time {
+            font-size: 0.75rem;
+        }
+        
+        .download-btn {
+            background: linear-gradient(135deg, var(--primary-purple), #6366f1);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+        }
+        
+        .download-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .file-size {
+            font-size: 0.7rem;
+            color: var(--text-gray);
+            margin-left: 8px;
+        }
+        
+        .loading, .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-gray);
+            font-size: 1.1rem;
+        }
+        
+        .empty-state {
+            background: var(--card-bg);
+            border-radius: 16px;
+            border: 1px dashed var(--border-color);
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        .badge {
+            background: var(--primary-purple);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+        }
+        
+        /* 文件图标样式 */
+        .file-icon {
+            font-size: 1.5rem;
+        }
+        
+        /* 搜索和筛选栏 */
+        .filter-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        
+        .search-input {
+            flex: 1;
+            padding: 10px 16px;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-main);
+            font-size: 0.9rem;
+        }
+        
+        .category-filter {
+            padding: 10px 16px;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-main);
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <h1>🌀 Tech<span>Share</span></h1>
+            <nav>
+                <ul>
+                    <li><a href="index.html">首页</a></li>
+                    <li class="nav-item has-dropdown">
+                        <a href="javascript:;" class="active">资源共享▾</a>
+                        <ul class="dropdown">
+                            <li><a href="source.html">资源查看</a></li>
+                            <li><a href="share.html">资源发布</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item has-dropdown">
+                        <a href="javascript:;">交流社区▾</a>
+                        <ul class="dropdown">
+                            <li><a href="talk.html">前往吐槽</a></li>
+                            <li><a href="forum.html">前往论坛</a></li>
+                        </ul>
+                    </li>
+                    <li id="adminEntrance" style="display:none;">
+                        <a href="admin.html" style="font-weight:bold;">⚙️ 管理后台</a>
+                    </li>
+                    <li class="user-controls nav-item has-dropdown">
+                        <a href="javascript:;"><span id="userInfo" class="user-badge"></span></a>
+                        <ul class="dropdown">
+                            <li><a href="mine.html">️个人中心</a></li>
+                        </ul>
+                    </li>
+                    <li class="user-controls">
+                        <span id="logoutBtn" style="display:none;">
+                            <a href="javascript:void(0)" onclick="logout()" class="logout-link">退出</a>
+                        </span>
+                    </li>
+					<li class="user-controlins">
+					    <span id="loginBtn" style="display:none;">
+					        <a href="javascript:void(0)" onclick="login()" class="login-link">点击此处登录</a>
+					    </span>
+					</li>
+					
+                    <button id="themeToggle" class="theme-toggle">🌙</button>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="content-section">
+            <div class="section-header">
+                <h2>📚 技术资源库</h2>
+                <span class="badge">实时更新</span>
+            </div>
+            
+            <!-- 搜索和筛选栏 -->
+            <div class="filter-bar">
+                <input type="text" id="searchInput" class="search-input" placeholder="🔍 搜索资源标题或描述...">
+                <select id="categoryFilter" class="category-filter">
+                    <option value="">全部分类</option>
+                    <option value="前端开发">前端开发</option>
+                    <option value="后端技术">后端技术</option>
+                    <option value="移动端">移动端</option>
+                    <option value="数据库">数据库</option>
+                    <option value="算法/AI">算法 / AI</option>
+                    <option value="电子书">电子书/文档</option>
+                    <option value="工具软件">工具软件</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+            
+            <div id="resource-list" class="resource-grid">
+                <div class="loading">📡 正在加载资源列表...</div>
+            </div>
+        </section>
+    </main>
+
+ 
+
+    <script src="js/api.js"></script>
+    <script src="js/escape.js"></script>
+    <script>
+        // allResources 在下面的分页逻辑中声明
+        // 1. 用户状态与权限逻辑
+        (function initUserAuth() {
+            const username = localStorage.getItem('username');
+            const role = localStorage.getItem('role');
+            const isLogin = localStorage.getItem('isLogin');
+            
+            // 渲染用户信息
+            const userInfo = document.getElementById('userInfo');
+            if (userInfo) userInfo.innerText = '👤 ' + (username || '未知用户');
+            
+            // 显示退出按钮
+           const logoutBtn = document.getElementById('logoutBtn');
+		   if (isLogin == 'true') {
+		       logoutBtn.style.display = 'inline';
+		       console.log("✅ 检测到用户登录");
+		   }
+           const loginBtn = document.getElementById('loginBtn');
+           if (isLogin != 'true') {
+               loginBtn.style.display = 'inline';
+               console.log("✅ 检测到用户未登录");
+           }
+			
+			
+            // 管理员后台入口
+            const adminEntrance = document.getElementById('adminEntrance');
+            if (role === 'admin' && adminEntrance) {
+                adminEntrance.style.display = 'block';
+                console.log("✅ 检测到管理员权限，已开启后台入口");
+            }
+        })();
+        
+        // 2. 分页加载资源列表（“加载更多”累加；搜索走服务端 keyword 全表查）
+        let resPage = 1;
+        const RES_PAGE_SIZE = 30;
+        let resDone = false;
+        let allResources = [];
+
+        async function loadResources(reset) {
+            const resourceList = document.getElementById('resource-list');
+            if (reset) { resPage = 1; resDone = false; allResources = []; }
+            if (resDone) { renderResources(allResources); return; }
+            if (resPage === 1) resourceList.innerHTML = '<div class="loading">📡 正在加载资源列表...</div>';
+
+            const keyword = document.getElementById('searchInput').value.trim();
+            try {
+                const data = window.API
+                    ? await window.API.get('/api/resources', { keyword, page: resPage, limit: RES_PAGE_SIZE })
+                    : await fetch(`/api/resources?keyword=${encodeURIComponent(keyword)}&page=${resPage}&limit=${RES_PAGE_SIZE}`).then(r => r.json());
+
+                if (data.code === 200 && data.data) {
+                    if (resPage === 1) allResources = data.data;
+                    else allResources = allResources.concat(data.data);
+                    if (data.data.length < RES_PAGE_SIZE) resDone = true;
+                    else resPage++;
+                    applyCategoryFilter();
+                    ensureResMoreBtn();
+                } else {
+                    resourceList.innerHTML = '<div class="empty-state">📭 暂无资源，快去发布第一个吧！</div>';
+                }
+            } catch (err) {
+                console.error('加载资源失败:', err);
+                resourceList.innerHTML = '<div class="empty-state">❌ 网络错误，无法加载资源列表</div>';
+            }
+        }
+
+        function ensureResMoreBtn() {
+            let btn = document.getElementById('resMoreBtn');
+            if (resDone) { if (btn) btn.remove(); return; }
+            if (!btn) {
+                btn = document.createElement('button');
+                btn.id = 'resMoreBtn';
+                btn.textContent = '加载更多';
+                btn.style.cssText = 'display:block;margin:20px auto;padding:10px 28px;cursor:pointer;';
+                btn.onclick = () => loadResources(false);
+                document.getElementById('resource-list').after(btn);
+            }
+        }
+        
+        // 3. 渲染资源卡片
+        function renderResources(resources) {
+            const resourceList = document.getElementById('resource-list');
+            
+            if (!resources || resources.length === 0) {
+                resourceList.innerHTML = '<div class="empty-state">🔍 没有找到匹配的资源</div>';
+                return;
+            }
+            
+            resourceList.innerHTML = resources.map(resource => `
+                <div class="resource-card" data-id="${resource.id}">
+                    <div class="resource-title">
+                        <span class="file-icon">${getFileIcon(resource.file_type)}</span>
+                        ${escapeHtml(resource.title)}
+                    </div>
+                    <div class="resource-category">${escapeHtml(resource.category)}</div>
+                    ${resource.description ? `<div class="resource-description">${escapeHtml(resource.description)}</div>` : ''}
+                    <div class="resource-meta">
+                        <div class="resource-uploader">
+                            👤 ${escapeHtml(resource.uploader)}
+                        </div>
+                        <div class="resource-time">
+                            📅 ${formatDate(resource.upload_time)}
+                        </div>
+                    </div>
+                    ${resource.file_size ? `<div class="file-size">📦 ${formatFileSize(resource.file_size)}</div>` : ''}
+                    <div style="margin-top: 16px;">
+                        <button class="download-btn" data-id="${Number(resource.id) || 0}">
+                            ⬇️ 下载资源
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            resourceList.querySelectorAll('.download-btn').forEach((b) => {
+                b.addEventListener('click', (e) => downloadResource(Number(b.dataset.id) || 0, e.target));
+            });
+        }
+
+        // 4. 下载资源
+        async function downloadResource(id, btn) {
+            btn = (btn && btn.tagName === 'BUTTON') ? btn : event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ 下载中...';
+            btn.disabled = true;
+            
+            try {
+                // 创建隐藏的下载链接
+                const downloadUrl = `/api/resources/download/${id}`;
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = ''; // 触发下载
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }, 2000);
+                
+            } catch (err) {
+                console.error('下载失败:', err);
+                alert('下载失败，请重试');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+        
+        // 5. 筛选：搜索走服务端（重置分页），分类在已加载集合上过滤
+        let searchTimer = null;
+        function filterResources() {
+            const searchTerm = document.getElementById('searchInput').value.trim();
+            if (searchTerm) {
+                clearTimeout(searchTimer);
+                searchTimer = setTimeout(() => loadResources(true), 300);
+            } else {
+                applyCategoryFilter();
+            }
+        }
+
+        function applyCategoryFilter() {
+            const category = document.getElementById('categoryFilter').value;
+            let filtered = allResources;
+            if (category) filtered = filtered.filter(r => r.category === category);
+            renderResources(filtered);
+        }
+        
+        // 6. 辅助函数
+        function getFileIcon(fileType) {
+            if (!fileType) return '📄';
+            if (fileType.includes('pdf')) return '📕';
+            if (fileType.includes('word') || fileType.includes('document')) return '📘';
+            if (fileType.includes('presentation') || fileType.includes('powerpoint')) return '📙';
+            if (fileType.includes('zip') || fileType.includes('rar') || fileType.includes('7z')) return '🗜️';
+            if (fileType.includes('text')) return '📝';
+            if (fileType.includes('image')) return '🖼️';
+            return '📄';
+        }
+        
+        function formatFileSize(bytes) {
+            if (!bytes) return '';
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '未知时间';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('zh-CN');
+        }
+        
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+        
+        // 7. 退出登录
+        async function __doLogout(confirmMsg, target) {
+            if (!confirm(confirmMsg)) return;
+            try { await fetch('/api/logout', { method: 'POST' }); } catch (_) {}
+            localStorage.clear();
+            window.location.href = target || 'login.html';
+        }
+        function logout() {
+            __doLogout('确定要退出登录吗？');
+        }
+        function login() {
+           
+                window.location.href = 'login.html';
+            
+        }
+        // 8. 主题切换
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            html.setAttribute('data-theme', savedTheme);
+            themeToggle.textContent = savedTheme === 'light' ? '☀️' : '🌙';
+        }
+        
+        themeToggle.addEventListener('click', () => {
+            const current = html.getAttribute('data-theme');
+            if (current === 'light') {
+                html.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                html.setAttribute('data-theme', 'light');
+                themeToggle.textContent = '☀️';
+                localStorage.setItem('theme', 'light');
+            }
+        });
+        
+        // 9. 监听搜索和筛选变化
+        document.getElementById('searchInput').addEventListener('input', filterResources);
+        document.getElementById('categoryFilter').addEventListener('change', filterResources);
+        
+        // 10. 页面加载
+        document.addEventListener('DOMContentLoaded', () => {
+            loadResources(true);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>技术论坛 - TechShare</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        html { overflow-y: scroll; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: var(--bg-color); color: var(--text-main); font-family: 'Inter', "Microsoft YaHei", sans-serif; transition: 0.3s; }
+
+        header { background: var(--card-bg); border-bottom: 1px solid var(--border-color); height: 70px; display: flex; align-items: center; position: sticky; top: 0; z-index: 1000; }
+        .header-container { max-width: 1200px; margin: 0 auto; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; }
+       
+        .container { max-width: 850px; margin: 2rem auto; padding: 0 20px; }
+        .publish-box { background: var(--card-bg); padding: 25px; border-radius: 16px; border: 1px solid var(--border-color); margin-bottom: 30px; }
+        input, textarea { width: 100%; padding: 14px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-main); margin-bottom: 15px; outline: none; }
+        .btn-primary { background: var(--primary-purple); color: white; border: none; padding: 12px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+
+        .post-card { background: var(--card-bg); border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; margin-bottom: 15px; cursor: pointer; display: flex; gap: 15px; transition: 0.2s; }
+        .post-card:hover { border-color: var(--primary-purple); transform: translateY(-2px); }
+        .post-avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-color); }
+        .post-title { font-size: 1.3rem; font-weight: bold; color: var(--text-main); margin: 5px 0; }
+        .meta { font-size: 0.85rem; color: var(--text-gray); }
+
+        #forumDetail { display: none; }
+        .back-btn { color: var(--accent-blue); cursor: pointer; margin-bottom: 20px; font-weight: bold; display: inline-block; }
+        .comment-item { display: flex; gap: 12px; padding: 15px 0; border-bottom: 1px solid var(--border-color); }
+        .reply-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+        @keyframes fadeInQuick { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+   <header>
+       <div class="header-container">
+           <h1>🌀 Tech<span>Share</span></h1>
+           <nav>
+               <ul>
+                   <li><a href="index.html">首页</a></li>
+                   <li class="nav-item has-dropdown">
+                       <a href="javascript:;">资源共享▾</a>
+                       <ul class="dropdown">
+                           <li><a href="source.html">资源查看</a></li>
+                           <li><a href="share.html">资源发布</a></li>
+                       </ul>
+                   </li>
+                   <li class="nav-item has-dropdown">
+                       <a href="javascript:;" class="active">交流社区▾</a>
+                       <ul class="dropdown">
+                           <li><a href="talk.html">前往吐槽</a></li>
+                           <li><a href="forum.html">前往论坛</a></li>
+                       </ul>
+                   </li>
+                   <li id="adminEntrance" style="display:none;"><a href="admin.html" style="font-weight:bold;">⚙️ 管理后台</a></li>
+                   <li class="user-controls nav-item has-dropdown">
+                       <a href="javascript:;"><span id="userInfo" class="user-badge"></span></a>
+                       <ul class="dropdown"><li><a href="mine.html">个人中心</a></li></ul>
+                   </li>
+                   <li class="user-controls">
+                       <span id="logoutBtn" style="display:none;"><a href="javascript:void(0)" onclick="logout()" class="logout-link" style=" text-decoration:none;">退出</a></span>
+                   </li>
+                   <button id="themeToggle" class="theme-toggle">🌙</button>
+               </ul>
+           </nav>
+       </div>
+   </header>
+
+    <main class="container">
+        <div id="forumList">
+            <div class="publish-box">
+                <h3>🚀 发起讨论</h3>
+                <input type="text" id="newPostTitle" placeholder="标题">
+                <textarea id="newPostContent" rows="4" placeholder="写下你的技术见解..."></textarea>
+                <button class="btn-primary" onclick="publishPost()">发布帖子</button>
+            </div>
+            <div class="publish-box" style="display:flex; gap:10px; align-items:center;">
+                <button class="btn-primary sort-tab" data-sort="new" style="opacity:1;">🕒 最新</button>
+                <button class="btn-primary sort-tab" data-sort="hot" style="opacity:0.6;">🔥 最热</button>
+            </div>
+            <div id="listContainer"></div>
+        </div>
+
+        <div id="forumDetail">
+            <div class="back-btn" onclick="backToList()">← 返回论坛列表</div>
+            <div id="postBody" class="publish-box"></div>
+            <div class="publish-box">
+                <h3>💬 回复讨论</h3>
+                <textarea id="replyContent" placeholder="在此回复..."></textarea>
+                <button class="btn-primary" onclick="sendReply()">发送回复</button>
+                <div id="commentContainer" style="margin-top:20px;"></div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/escape.js"></script>
+    <script>
+        const API = '/api/posts';
+        const esc = (v) => (window.escapeHtml ? window.escapeHtml(v) : String(v == null ? '' : v));
+        const currentUser = localStorage.getItem('username');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('isLogin') !== 'true') { window.location.href = 'login.html'; return; }
+            document.getElementById('userInfo').innerText = '👤 ' + currentUser;
+            document.getElementById('logoutBtn').style.display = 'inline';
+            if (localStorage.getItem('role') === 'admin') document.getElementById('adminEntrance').style.display = 'block';
+            loadPosts(true);
+            initTheme();
+			const urlParams = new URLSearchParams(window.location.search);
+			    const postId = urlParams.get('id');
+			
+			    if (postId) {
+			        // 如果有 ID，直接打开详情页
+			        openDetail(postId);
+			        // 同时依然可以在后台加载列表，方便用户点击“返回列表”时能看到东西
+			        loadPosts(true); 
+			    } else {
+			        // 如果没有 ID，正常加载列表首页
+			        loadPosts(true);
+			    }
+        });
+
+        let postPage = 1;
+        const POST_PAGE_SIZE = 20;
+        let postDone = false;
+        let postSort = 'new';
+
+        document.querySelectorAll('.sort-tab').forEach((b) => {
+            b.addEventListener('click', () => {
+                if (postSort === b.dataset.sort) return;
+                postSort = b.dataset.sort;
+                document.querySelectorAll('.sort-tab').forEach((x) => x.style.opacity = x === b ? '1' : '0.6');
+                loadPosts(true);
+            });
+        });
+
+        async function toggleLike(id, btn) {
+            if (localStorage.getItem('isLogin') !== 'true') { window.location.href = 'login.html'; return; }
+            const headers = Object.assign({ 'Content-Type': 'application/json' },
+                window.API ? window.API.authHeaders() : {});
+            try {
+                const r = await fetch(`${API}/${Number(id) || 0}/like`, { method: 'POST', headers });
+                const j = await r.json();
+                if (j.code === 200 && btn) btn.innerHTML = `${j.liked ? '❤️' : '🤍'} ${j.likes}`;
+                else alert(j.msg || '操作失败');
+            } catch (_) { alert('网络错误，请稍后再试'); }
+        }
+
+        async function loadPosts(reset) {
+            if (reset) { postPage = 1; postDone = false; }
+            if (postDone) return;
+            const json = window.API
+                ? await window.API.get(API, { page: postPage, limit: POST_PAGE_SIZE, sort: postSort })
+                : await fetch(`${API}?page=${postPage}&limit=${POST_PAGE_SIZE}&sort=${postSort}`).then(r => r.json());
+            const items = json.data || [];
+            document.getElementById('listContainer').innerHTML =
+                (postPage > 1 ? document.getElementById('listContainer').innerHTML : '') +
+                items.map(p => `
+                <div class="post-card">
+                    <img src="/api/user/avatar?username=${encodeURIComponent(p.username)}" loading="lazy" decoding="async" width="48" height="48" class="post-avatar" onerror="this.src='css/default-avatar.png'" onclick="openDetail(${Number(p.id) || 0})">
+                    <div style="flex:1;" onclick="openDetail(${Number(p.id) || 0})">
+                        <div class="meta">${esc(p.username)} • ${esc(new Date(p.create_time).toLocaleDateString())}</div>
+                        <div class="post-title">${esc(p.title)}</div>
+                        <div class="meta" style="color:var(--accent-blue);">查看详情 →</div>
+                    </div>
+                    <button class="like-btn" data-id="${Number(p.id) || 0}" style="align-self:center; background:none; border:none; cursor:pointer; font-size:1rem;">${p.liked ? '❤️' : '🤍'} ${Number(p.likes) || 0}</button>
+                </div>
+            `).join('');
+            document.querySelectorAll('#listContainer .like-btn').forEach((b) => {
+                b.addEventListener('click', (e) => { e.stopPropagation(); toggleLike(b.dataset.id, b); });
+            });
+            if (items.length < POST_PAGE_SIZE) postDone = true;
+            else postPage++;
+            ensurePostMoreBtn();
+        }
+
+        function ensurePostMoreBtn() {
+            let btn = document.getElementById('postMoreBtn');
+            if (postDone) { if (btn) btn.remove(); return; }
+            if (!btn) {
+                btn = document.createElement('button');
+                btn.id = 'postMoreBtn';
+                btn.textContent = '加载更多';
+                btn.style.cssText = 'display:block;margin:20px auto;padding:10px 28px;cursor:pointer;';
+                btn.onclick = () => loadPosts(false);
+                document.getElementById('listContainer').after(btn);
+            }
+        }
+
+        async function openDetail(id) {
+            activePostId = id;
+            const headers = {};
+            try { const t = localStorage.getItem('token'); if (t) headers['Authorization'] = 'Bearer ' + t; } catch (_) {}
+            const res = await fetch(`${API}/${id}`, { headers });
+            const post = (await res.json()).data;
+            if (!post || !post.id) { alert('帖子不存在或已删除'); backToList(); return; }
+            document.getElementById('forumList').style.display = 'none';
+            document.getElementById('forumDetail').style.display = 'block';
+            document.getElementById('postBody').innerHTML = `
+                <div style="display:flex; gap:12px; align-items:center; margin-bottom:15px;">
+                    <img src="/api/user/avatar?username=${encodeURIComponent(post.username)}" loading="lazy" decoding="async" width="48" height="48" class="post-avatar" onerror="this.src='css/default-avatar.png'">
+                    <div class="meta">${esc(post.username)} • ${esc(new Date(post.create_time).toLocaleString())}</div>
+                </div>
+                <h2 class="post-title" style="font-size:1.8rem;">${esc(post.title)}</h2>
+                <div style="white-space:pre-wrap; margin-top:15px; color:var(--text-main);">${esc(post.content)}</div>
+                <div style="margin-top:15px;">
+                    <button id="detailLikeBtn" style="background:none; border:1px solid var(--border-color); border-radius:8px; padding:6px 14px; cursor:pointer; font-size:1rem;">${post.liked ? '❤️' : '🤍'} ${Number(post.likes) || 0}</button>
+                </div>
+            `;
+            document.getElementById('detailLikeBtn').addEventListener('click', (e) => toggleLike(post.id, e.target.closest('button')));
+            loadReplies(id);
+        }
+
+        async function loadReplies(id) {
+            const res = await fetch(`${API}/${id}/comments`);
+            const json = await res.json();
+            document.getElementById('commentContainer').innerHTML = json.data.map(c => `
+                <div class="comment-item">
+                    <img src="/api/user/avatar?username=${encodeURIComponent(c.username)}" loading="lazy" decoding="async" width="36" height="36" class="reply-avatar" onerror="this.src='css/default-avatar.png'">
+                    <div style="flex:1;">
+                        <div class="meta" style="font-weight:bold; color:var(--accent-blue);">${esc(c.username)} <span style="font-weight:normal; color:var(--text-gray);">• ${esc(new Date(c.create_time).toLocaleString())}</span></div>
+                        <div style="margin-top:5px;">${esc(c.content)}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function publishPost() {
+            const title = document.getElementById('newPostTitle').value;
+            const content = document.getElementById('newPostContent').value;
+            if(!title || !content) return;
+            const authFallback = () => {
+                try { const t = localStorage.getItem('token'); return t ? { 'Authorization': 'Bearer ' + t, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' }; } catch (_) { return { 'Content-Type': 'application/json' }; }
+            };
+            const res = window.API
+                ? await window.API.send('POST', API, { title, content, username: currentUser })
+                : await fetch(API, { method: 'POST', headers: authFallback(), body: JSON.stringify({ title, content, username: currentUser }) });
+            document.getElementById('newPostTitle').value = '';
+            document.getElementById('newPostContent').value = '';
+            loadPosts(true);
+        }
+
+        async function sendReply() {
+            const content = document.getElementById('replyContent').value;
+            if(!content) return;
+            const res = window.API
+                ? await window.API.send('POST', `${API}/${activePostId}/comments`, { username: currentUser, content })
+                : await fetch(`${API}/${activePostId}/comments`, { method: 'POST', headers: authFallback(), body: JSON.stringify({ username: currentUser, content }) });
+            document.getElementById('replyContent').value = '';
+            loadReplies(activePostId);
+        }
+
+        function backToList() { document.getElementById('forumList').style.display = 'block'; document.getElementById('forumDetail').style.display = 'none'; window.history.pushState({}, document.title, window.location.pathname);}
+        async function __doLogout(confirmMsg, target) {
+            if (!confirm(confirmMsg)) return;
+            try { await fetch('/api/logout', { method: 'POST' }); } catch (_) {}
+            localStorage.clear();
+            window.location.href = target || 'login.html';
+        }
+        function logout() { __doLogout('退出？'); }
+        function initTheme() {
+            const html = document.documentElement;
+            const btn = document.getElementById('themeToggle');
+            const saved = localStorage.getItem('theme') || 'dark';
+            html.setAttribute('data-theme', saved);
+            btn.innerText = saved === 'light' ? '☀️' : '🌙';
+            btn.onclick = () => {
+                const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+                html.setAttribute('data-theme', next);
+                localStorage.setItem('theme', next);
+                btn.innerText = next === 'light' ? '☀️' : '🌙';
+            };
+        }
+    </script>
+</body>
+</html>

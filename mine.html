@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人中心 - TechShare</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* 页面私有样式优化 */
+        .container { max-width: 1000px; margin: 2rem auto; padding: 0 20px; }
+        .profile-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            max-width: 650px;
+            margin: 0 auto;
+        }
+
+        /* --- 新增：我的帖子区域样式 --- */
+        .posts-section {
+            margin-top: 2rem;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 1.5rem;
+            max-width: 650px;
+            margin: 2rem auto 0;
+        }
+        .posts-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--primary-purple);
+        }
+        .posts-header h3 { font-size: 1.3rem; margin: 0; color: var(--text-main); }
+        .posts-header .post-count {
+            background: var(--primary-purple);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+        .posts-list { display: flex; flex-direction: column; gap: 1rem; }
+        .post-item {
+            background: var(--input-bg);
+            border-radius: 12px;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s;
+        }
+        .post-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-color: var(--primary-purple);
+        }
+        .post-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .post-title a { color: var(--text-main); text-decoration: none; transition: color 0.2s; }
+        .post-title a:hover { color: var(--primary-purple); }
+        .post-content {
+            color: var(--text-gray);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin-bottom: 0.75rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .post-meta { display: flex; gap: 1rem; font-size: 0.8rem; color: var(--text-gray); align-items: center; }
+        .post-likes { color: var(--danger-red); }
+        .post-actions { display: flex; gap: 12px; margin-top: 8px; }
+        .delete-post-btn {
+            background: transparent; border: none; color: #ef4444;
+            cursor: pointer; font-size: 0.75rem; padding: 4px 8px;
+            border-radius: 6px; transition: all 0.2s;
+        }
+        .delete-post-btn:hover { background: rgba(239, 68, 68, 0.1); }
+        .view-detail-link { color: var(--primary-purple); text-decoration: none; font-size: 0.75rem; }
+        .empty-posts, .loading-posts, .error-posts { text-align: center; padding: 2rem; color: var(--text-gray); }
+        .refresh-btn { 
+            background: transparent; border: 1px solid var(--border-color); 
+            padding: 6px 12px; border-radius: 8px; cursor: pointer; color: var(--text-main); 
+        }
+        /* --- 帖子样式结束 --- */
+
+        .loading-text { opacity: 0.6; font-style: italic; }
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 1.2rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .info-item label { color: var(--text-gray); }
+        .info-item span { color: var(--text-main); font-weight: 600; }
+
+        .avatar-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 2rem; }
+        .avatar-wrapper {
+            position: relative;
+            width: 120px; height: 120px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 3px solid var(--primary-purple);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            background: var(--input-bg);
+            cursor: pointer;
+        }
+        .avatar-img { width: 100%; height: 100%; object-fit: cover; }
+        
+        #editSection .avatar-wrapper:hover::after {
+            content: "点击更换";
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            text-align: center;
+            padding: 8px;
+            font-size: 12px;
+        }
+        
+        .btn-group { margin-top: 2rem; display: flex; gap: 12px; justify-content: center; }
+        .primary-btn { background: var(--primary-purple); color: white; border: none; padding: 12px 30px; border-radius: 10px; cursor: pointer; font-weight: bold; transition: opacity 0.3s; }
+        .primary-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .secondary-btn { background: var(--input-bg); color: var(--text-main); border: 1px solid var(--border-color); padding: 12px 30px; border-radius: 10px; cursor: pointer; }
+
+        .form-item { margin-bottom: 1.5rem; }
+        .form-item label { display: block; margin-bottom: 0.5rem; color: var(--text-gray); font-weight: 500; }
+        .form-item input, .form-item textarea {
+            width: 100%; padding: 10px 12px;
+            background: var(--input-bg); border: 1px solid var(--border-color);
+            border-radius: 8px; color: var(--text-main); font-size: 1rem; transition: all 0.3s;
+        }
+        .form-item input:focus, .form-item textarea:focus { outline: none; border-color: var(--primary-purple); box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.1); }
+
+        .nav-item { position: relative; display: flex; align-items: center; height: 70px; }
+        .toast-message {
+            position: fixed; top: 20px; right: 20px;
+            background: var(--card-bg); border-left: 4px solid var(--primary-purple);
+            padding: 12px 20px; border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 9999; animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <h1>🌀 Tech<span>Share</span></h1>
+            <nav>
+                <ul>
+                    <li><a href="index.html">首页</a></li>
+                    <li class="nav-item has-dropdown">
+                        <a href="javascript:;">资源共享▾</a>
+                        <ul class="dropdown">
+                            <li><a href="source.html">资源查看</a></li>
+                            <li><a href="share.html">资源发布</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item has-dropdown">
+                        <a href="javascript:;">交流社区▾</a>
+                        <ul class="dropdown">
+                            <li><a href="talk.html">前往吐槽</a></li>
+                            <li><a href="forum.html">前往论坛</a></li>
+                        </ul>
+                    </li>
+                    <li id="adminEntrance" style="display:none;"><a href="admin.html">⚙️ 管理后台</a></li>
+                    <li class="user-controls nav-item has-dropdown">
+                        <a href="javascript:;"><span id="userInfo" class="user-badge">👤 载入中...</span></a>
+                        <ul class="dropdown">
+                            <li><a href="mine.html" class="active">个人中心</a></li>
+                        </ul>
+                    </li>
+                    <li class="user-controls">
+                        <a href="javascript:void(0)" id="logoutBtn" onclick="logout()" class="logout-link" style="text-decoration:none; display:none; color: #ef4444;">退出</a>
+                    </li>
+                    <button id="themeToggle" class="theme-toggle" style="background:none; border:none; cursor:pointer; font-size:1.4rem;">🌙</button>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="profile-card">
+            <div id="viewSection">
+                <h2>个人资料</h2>
+                <div class="avatar-container">
+                    <div class="avatar-wrapper">
+                        <img src="" alt="头像" class="avatar-img" id="avatarView" onerror="this.src='css/default-avatar.png'">
+                    </div>
+                </div>
+                <div class="info-item"><label>用户名</label><span id="username" class="loading-text">载入中...</span></div>
+                <div class="info-item"><label>电子邮箱</label><span id="email" class="loading-text">载入中...</span></div>
+                <div class="info-item"><label>个性签名</label><span id="signature" class="loading-text">载入中...</span></div>
+                <div class="btn-group">
+                    <button class="primary-btn" onclick="toggleEdit(true)">编辑资料</button>
+                    <button class="secondary-btn" onclick="togglePw(true)">修改密码</button>
+                </div>
+            </div>
+
+            <div id="editSection" style="display:none;">
+                <h2>修改资料</h2>
+                <div class="avatar-container">
+                    <div class="avatar-wrapper" onclick="document.getElementById('avatarUpload').click()">
+                        <img src="" alt="预览" class="avatar-img" id="avatarPreview" onerror="this.src='css/default-avatar.png'">
+                        <div style="position:absolute; bottom:0; background:rgba(0,0,0,0.5); width:100%; color:white; font-size:10px; text-align:center; padding:2px;">点击更换</div>
+                    </div>
+                    <input type="file" id="avatarUpload" style="display:none" accept="image/*">
+                </div>
+                <div class="form-item">
+                    <label>用户名（注册后不可改）</label>
+                    <input type="text" id="editUsername" readonly disabled>
+                </div>
+                <div class="form-item">
+                    <label>邮箱</label>
+                    <input type="email" id="editEmail" placeholder="请输入邮箱">
+                </div>
+                <div class="form-item">
+                    <label>个性签名</label>
+                    <textarea id="editSignature" rows="3" placeholder="写下你的个性签名..."></textarea>
+                </div>
+                <div class="btn-group">
+                    <button class="primary-btn" id="saveBtn">确认保存</button>
+                    <button class="secondary-btn" onclick="toggleEdit(false)">取消</button>
+                </div>
+            </div>
+
+            <div id="pwSection" style="display:none;">
+                <h2>修改密码</h2>
+                <div class="form-item">
+                    <label>旧密码</label>
+                    <input type="password" id="oldPassword" placeholder="请输入旧密码" autocomplete="current-password">
+                </div>
+                <div class="form-item">
+                    <label>新密码（6-72位）</label>
+                    <input type="password" id="newPassword" placeholder="请输入新密码" autocomplete="new-password">
+                </div>
+                <div class="form-item">
+                    <label>确认新密码</label>
+                    <input type="password" id="confirmPassword" placeholder="请再输一次新密码" autocomplete="new-password">
+                </div>
+                <div class="btn-group">
+                    <button class="primary-btn" id="savePwBtn">确认修改</button>
+                    <button class="secondary-btn" onclick="togglePw(false)">取消</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="posts-section">
+            <div class="posts-header">
+                <h3>📝 我的帖子</h3>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <button class="my-sort-tab" onclick="setMyPostSort('new', this)" style="border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); border-radius:8px; padding:4px 12px; cursor:pointer;">🕒 最新</button>
+                    <button class="my-sort-tab" onclick="setMyPostSort('hot', this)" style="border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); border-radius:8px; padding:4px 12px; cursor:pointer; opacity:0.6;">🔥 最热</button>
+                    <div class="post-count" id="postCount">0</div>
+                </div>
+            </div>
+            <div id="postsContainer">
+                <div class="loading-posts">📖 正在加载您的帖子...</div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/escape.js"></script>
+    <script>
+        
+        
+        function showMessage(msg, isError = false) {
+            const toast = document.createElement('div');
+            toast.className = 'toast-message';
+            toast.style.borderLeftColor = isError ? '#ef4444' : '#10b981';
+            toast.style.color = 'var(--text-main)';
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+        
+        (function quickFill() {
+            const user = localStorage.getItem('username');
+            if (user) {
+                setTimeout(() => {
+                    const userInfoEl = document.getElementById('userInfo');
+                    if (userInfoEl) userInfoEl.innerText = '👤 ' + user;
+                    const usernameEl = document.getElementById('username');
+                    if (usernameEl) usernameEl.innerText = user;
+                    const logoutBtn = document.getElementById('logoutBtn');
+                    if (logoutBtn) logoutBtn.style.display = 'inline';
+                }, 0);
+            }
+        })();
+
+        document.addEventListener('DOMContentLoaded', () => {
+			
+			document.getElementById('editEmail').addEventListener('blur', function() {
+			    const email = this.value.trim();
+			    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+			    
+			    if (email && !emailRegex.test(email)) {
+			        this.style.borderColor = '#ef4444'; // 变红提示
+			    } else {
+			        this.style.borderColor = 'var(--border-color)'; // 恢复原样
+			    }
+			});
+			
+            if (localStorage.getItem('isLogin') !== 'true') {
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            if(localStorage.getItem('role') === 'admin') {
+                const adminEntrance = document.getElementById('adminEntrance');
+                if (adminEntrance) adminEntrance.style.display = 'block';
+            }
+
+            initTheme();
+            loadProfileData();
+            loadUserPosts(); // 加载帖子
+        });
+
+        async function loadProfileData() {
+            const username = localStorage.getItem('username');
+            try {
+                const res = await fetch(`/api/user/profile?username=${encodeURIComponent(username)}`);
+                const data = await res.json();
+                if(data.code === 200 && data.data) renderData(data.data);
+            } catch (err) {
+                console.error("加载失败:", err);
+                document.querySelectorAll('.loading-text').forEach(el => el.classList.remove('loading-text'));
+            }
+        }
+
+        function renderData(u) {
+            ['username', 'email', 'signature'].forEach(f => {
+                const el = document.getElementById(f);
+                if (el) {
+                    el.innerText = u[f] || (f === 'signature' ? '暂无签名' : '未设置');
+                    el.classList.remove('loading-text');
+                }
+                const editEl = document.getElementById('edit' + f.charAt(0).toUpperCase() + f.slice(1));
+                if (editEl) editEl.value = u[f] || '';
+            });
+            // 头像经统一接口（公网 URL/私有桶临时签名/本地路径都在后端处理，前端无感）
+            const avatar = u.avatar
+                ? `/api/user/avatar?username=${encodeURIComponent(u.username || localStorage.getItem('username'))}`
+                : 'css/default-avatar.png';
+            document.getElementById('avatarView').src = avatar;
+            document.getElementById('avatarPreview').src = avatar;
+        }
+
+        /* --- 新增：加载用户帖子逻辑 --- */
+        let myPostSort = 'new';
+        function setMyPostSort(s, btn) {
+            if (myPostSort === s) return;
+            myPostSort = s;
+            document.querySelectorAll('.my-sort-tab').forEach((x) => x.style.opacity = x === btn ? '1' : '0.6');
+            loadUserPosts();
+        }
+        async function loadUserPosts() {
+            const username = localStorage.getItem('username');
+            const container = document.getElementById('postsContainer');
+            const headers = {};
+            try { const t = localStorage.getItem('token'); if (t) headers['Authorization'] = 'Bearer ' + t; } catch (_) {}
+            try {
+                const res = await fetch(`/api/posts/user?username=${encodeURIComponent(username)}&sort=${myPostSort}`, { headers });
+                const data = await res.json();
+                if (data.code === 200) {
+                    renderPosts(data.data || [], data.pagination && data.pagination.total);
+                } else {
+                    renderPosts([], 0);
+                }
+            } catch (err) {
+                container.innerHTML = `<div class="error-posts">❌ 加载失败<br><button class="refresh-btn" onclick="loadUserPosts()">🔄 重试</button></div>`;
+            }
+        }
+
+        async function toggleMyLike(id, btn) {
+            const headers = { 'Content-Type': 'application/json' };
+            try { const t = localStorage.getItem('token'); if (t) headers['Authorization'] = 'Bearer ' + t; } catch (_) {}
+            try {
+                const r = await fetch(`/api/posts/${Number(id) || 0}/like`, { method: 'POST', headers });
+                const j = await r.json();
+                if (j.code === 200 && btn) btn.innerHTML = `${j.liked ? '❤️' : '🤍'} ${j.likes}`;
+                else showMessage(j.msg || '操作失败', true);
+            } catch (_) { showMessage('网络错误', true); }
+        }
+
+        function renderPosts(posts, total) {
+            const container = document.getElementById('postsContainer');
+            document.getElementById('postCount').innerText = (total !== undefined ? total : posts.length);
+            if (posts.length === 0) {
+                container.innerHTML = '<div class="empty-posts">✨ 暂无帖子，快去社区分享吧～</div>';
+                return;
+            }
+            container.innerHTML = `<div class="posts-list">${posts.map(p => `
+                <div class="post-item">
+                    <div class="post-title"><a href="forum.html?id=${Number(p.id) || 0}" target="_blank">${escapeHtml(p.title)}</a></div>
+                    <div class="post-content">${escapeHtml(p.content)}</div>
+                    <div class="post-meta">
+                        <span>📅 ${escapeHtml(new Date(p.create_time).toLocaleDateString())}</span>
+                        <button class="like-btn" data-id="${Number(p.id) || 0}" style="background:none; border:none; cursor:pointer; font-size:0.8rem; color:var(--danger-red);">${p.liked ? '❤️' : '🤍'} ${Number(p.likes) || 0}</button>
+                    </div>
+                    <div class="post-actions">
+                        <a href="forum.html?id=${Number(p.id) || 0}" class="view-detail-link">详情 →</a>
+                        <button class="delete-post-btn" data-id="${Number(p.id) || 0}" data-title="${escapeHtml(p.title)}">🗑️ 删除</button>
+                    </div>
+                </div>`).join('')}</div>`;
+            container.querySelectorAll('.delete-post-btn').forEach((b) => {
+                b.addEventListener('click', () => window.deletePost(Number(b.dataset.id) || 0, b.dataset.title || ''));
+            });
+            container.querySelectorAll('.like-btn').forEach((b) => {
+                b.addEventListener('click', () => toggleMyLike(b.dataset.id, b));
+            });
+        }
+
+        window.deletePost = async function(id, title) {
+            if (!confirm(`确定删除《${title}》吗？`)) return;
+            try {
+                const headers = {};
+                try { const t = localStorage.getItem('token'); if (t) headers['Authorization'] = 'Bearer ' + t; } catch (_) {}
+                const res = await fetch(`/api/posts/${Number(id) || 0}`, {
+                    method: 'DELETE',
+                    headers
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    showMessage('删除成功');
+                    loadUserPosts();
+                } else {
+                    showMessage(data.msg, true);
+                }
+            } catch (err) { showMessage('网络错误', true); }
+        };
+
+        function escapeHtml(str) {
+            return str ? str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) : '';
+        }
+        /* --- 帖子逻辑结束 --- */
+
+        function toggleEdit(isEdit) {
+            document.getElementById('viewSection').style.display = isEdit ? 'none' : 'block';
+            document.getElementById('editSection').style.display = isEdit ? 'block' : 'none';
+            document.getElementById('pwSection').style.display = 'none';
+            if (isEdit) {
+                document.getElementById('editUsername').value = localStorage.getItem('username') || '';
+                document.getElementById('editEmail').value = document.getElementById('email').innerText === '未设置' ? '' : document.getElementById('email').innerText;
+                document.getElementById('editSignature').value = document.getElementById('signature').innerText === '暂无签名' ? '' : document.getElementById('signature').innerText;
+            }
+        }
+
+        function togglePw(show) {
+            document.getElementById('viewSection').style.display = show ? 'none' : 'block';
+            document.getElementById('editSection').style.display = 'none';
+            document.getElementById('pwSection').style.display = show ? 'block' : 'none';
+        }
+
+        document.getElementById('savePwBtn').onclick = async () => {
+            const oldPassword = document.getElementById('oldPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirm = document.getElementById('confirmPassword').value;
+            if (!oldPassword || !newPassword) { showMessage('旧密码和新密码不能为空', true); return; }
+            if (newPassword.length < 6 || newPassword.length > 72) { showMessage('新密码需6-72位', true); return; }
+            if (newPassword !== confirm) { showMessage('两次新密码不一致', true); return; }
+            const btn = document.getElementById('savePwBtn');
+            btn.disabled = true;
+            try {
+                const headers = Object.assign({ 'Content-Type': 'application/json' },
+                    window.API ? window.API.authHeaders() : {});
+                const res = await fetch('/api/user/password', {
+                    method: 'PUT', headers,
+                    body: JSON.stringify({ oldPassword, newPassword })
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    showMessage('修改成功，请重新登录');
+                    setTimeout(() => { localStorage.clear(); window.location.href = 'login.html'; }, 800);
+                } else showMessage(data.msg || '修改失败', true);
+            } catch (_) { showMessage('网络错误', true); }
+            finally { btn.disabled = false; }
+        };
+
+        document.getElementById('saveBtn').onclick = async () => {
+            const btn = document.getElementById('saveBtn');
+            
+            const oldUsername = localStorage.getItem('username');
+			const newEmail = document.getElementById('editEmail').value.trim();
+            const avatarFile = pendingAvatar || document.getElementById('avatarUpload').files[0];
+
+			const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+			    if (newEmail && !emailRegex.test(newEmail)) {
+			        showMessage('请输入有效的邮箱地址', true);
+			        document.getElementById('editEmail').focus(); // 自动聚焦到错误输入框
+			        return;
+			    }
+				btn.disabled = true;
+				
+            try {
+                if (avatarFile) {
+                    const fd = new FormData(); fd.append('avatar', avatarFile);
+                    await fetch(`/api/user/avatar`, { method: 'POST', headers: window.API ? window.API.authHeaders() : {}, body: fd });
+                }
+                const res = await fetch(`/api/user/profile`, {
+                    method: 'PUT',
+                    headers: Object.assign({ 'Content-Type': 'application/json' },
+                        window.API ? window.API.authHeaders() : {}),
+                    body: JSON.stringify({
+                        oldUsername,
+                        email: document.getElementById('editEmail').value,
+                        signature: document.getElementById('editSignature').value
+                    })
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    showMessage('更新成功');
+                    setTimeout(() => location.reload(), 800);
+                } else showMessage(data.msg, true);
+            } catch (err) { showMessage('保存失败', true); }
+            finally { btn.disabled = false; }
+        };
+
+        // 待上传头像（默认原文件；选择后经 canvas 压到 256px 以内再传，失败则回落原图）
+        let pendingAvatar = null;
+
+        document.getElementById('avatarUpload').onchange = function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            pendingAvatar = file;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                document.getElementById('avatarPreview').src = ev.target.result;
+                const img = new Image();
+                img.onload = () => {
+                    try {
+                        const max = 256;
+                        const scale = Math.min(1, max / Math.max(img.width, img.height));
+                        const w = Math.max(1, Math.round(img.width * scale));
+                        const h = Math.max(1, Math.round(img.height * scale));
+                        const cv = document.createElement('canvas');
+                        cv.width = w; cv.height = h;
+                        cv.getContext('2d').drawImage(img, 0, 0, w, h);
+                        cv.toBlob((blob) => {
+                            if (blob) pendingAvatar = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+                        }, 'image/jpeg', 0.85);
+                    } catch (_) { /* 保持原图 */ }
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        };
+
+        async function __doLogout(confirmMsg, target) {
+            if (!confirm(confirmMsg)) return;
+            try { await fetch('/api/logout', { method: 'POST' }); } catch (_) {}
+            localStorage.clear();
+            window.location.href = target || 'login.html';
+        }
+        function logout() {
+            __doLogout('确定要退出登录吗？');
+        }
+
+        function initTheme() {
+            const html = document.documentElement;
+            const toggle = document.getElementById('themeToggle');
+            const saved = localStorage.getItem('theme') || 'dark';
+            html.setAttribute('data-theme', saved);
+            if (toggle) {
+                toggle.innerText = saved === 'light' ? '☀️' : '🌙';
+                toggle.onclick = () => {
+                    const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+                    html.setAttribute('data-theme', next);
+                    localStorage.setItem('theme', next);
+                    toggle.innerText = next === 'light' ? '☀️' : '🌙';
+                };
+            }
+        }
+    </script>
+</body>
+</html>

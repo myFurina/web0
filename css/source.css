@@ -1,0 +1,30 @@
+/* 资源网格 */
+.section-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; }
+.badge { background: var(--primary-purple); padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; }
+
+.resource-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 25px;
+}
+
+/* 资源卡片样式 (由 front.js 生成) */
+.resource-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 15px;
+    padding: 20px;
+    transition: 0.3s;
+}
+.resource-card:hover { transform: translateY(-5px); border-color: var(--primary-purple); }
+
+.loading { text-align: center; color: var(--text-gray); padding: 5rem; grid-column: 1/-1; }
+
+footer {
+    text-align: center;
+    padding: 4rem 0;
+    color: var(--text-gray);
+    font-size: 0.9rem;
+    border-top: 1px solid var(--border-color);
+    margin-top: 4rem;
+}

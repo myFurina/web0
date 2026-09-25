@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>后台控制中心 - TechShare</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* 后台专用样式补丁 */
+        html { overflow-y: scroll; }
+        .admin-container { 
+            max-width: 1200px; 
+            margin: 2rem auto; 
+            padding: 0 20px; 
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .admin-hero {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .admin-hero h2 { margin: 0; font-size: 1.8rem; color: var(--text-main); }
+        .admin-hero p { margin: 5px 0 0; color: var(--text-gray); }
+
+        .admin-tabs { 
+            display: flex; 
+            gap: 10px; 
+            margin-bottom: 1.5rem; 
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+        
+        .tab-btn {
+            background: var(--input-bg); 
+            color: var(--text-gray); 
+            border: 1px solid var(--border-color);
+            padding: 12px 24px; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            transition: 0.3s; 
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover { border-color: var(--primary-purple); color: var(--text-main); }
+        .tab-btn.active { 
+            background: var(--primary-purple); 
+            color: white; 
+            border-color: var(--primary-purple); 
+            box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3);
+        }
+
+        .table-card {
+            background: var(--card-bg); 
+            border: 1px solid var(--border-color);
+            border-radius: 20px; 
+            overflow: hidden; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        th { 
+            background: rgba(124, 58, 237, 0.05); 
+            color: var(--primary-purple); 
+            padding: 18px 20px; 
+            font-size: 0.85rem; 
+            text-align: left;
+            border-bottom: 2px solid var(--border-color);
+        }
+        td { 
+            padding: 16px 20px; 
+            border-bottom: 1px solid var(--border-color); 
+            font-size: 0.95rem; 
+            color: var(--text-main); 
+        }
+        
+        tr:hover td { background: rgba(124, 58, 237, 0.02); }
+
+        .badge-tag { 
+            background: var(--input-bg); 
+            padding: 4px 12px; 
+            border-radius: 8px; 
+            font-size: 0.8rem; 
+            border: 1px solid var(--border-color); 
+            color: var(--accent-blue); 
+        }
+
+        .del-btn { 
+            background: rgba(239, 68, 68, 0.1); 
+            color: var(--danger-red); 
+            border: 1px solid rgba(239, 68, 68, 0.2); 
+            padding: 8px 16px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 0.85rem; 
+            font-weight: 600; 
+            transition: 0.2s;
+        }
+        .del-btn:hover { background: var(--danger-red); color: white; transform: scale(1.05); }
+
+        .loading-box { padding: 80px; text-align: center; color: var(--text-gray); font-style: italic; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .theme-toggle { background: none; border: none; cursor: pointer; font-size: 1.4rem; padding: 0 10px; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <h1>🌀 Tech<span>Admin</span></h1>
+            <nav>
+                <ul style="list-style: none; display: flex; align-items: center; gap: 15px;">
+                    <li><a href="index.html" style="color:var(--text-gray); text-decoration:none; font-size:0.9rem;">返回前台</a></li>
+                    <li class="nav-item">
+                        <span id="userInfo" class="user-badge">👤 管理员</span>
+                    </li>
+                    <li>
+                        <a href="javascript:void(0)" onclick="logout()" class="logout-link" style="color:var(--danger-red); text-decoration:none; font-size:0.9rem;">退出</a>
+                    </li>
+                    <button id="themeToggle" class="theme-toggle">🌙</button>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="admin-container">
+        <div class="admin-hero">
+            <div>
+                <h2 id="current-title">📦 资源管理</h2>
+                <p id="current-desc">管理系统内所有用户发布的资源文件。</p>
+            </div>
+            <div id="stat-count" class="user-badge" style="padding: 10px 20px; font-size: 1rem;">总数: 0</div>
+        </div>
+
+        <div class="admin-tabs">
+            <button class="tab-btn active" onclick="switchTab('resource', this)">📦 资源管理</button>
+            <button class="tab-btn" onclick="switchTab('forum', this)">📝 论坛管理</button> 
+            <button class="tab-btn" onclick="switchTab('comment', this)">💬 吐槽管理</button>
+            <button class="tab-btn" onclick="switchTab('user', this)">👥 用户管理</button>
+        </div>
+
+        <div class="table-card">
+            <table id="admin-table">
+                <thead id="admin-thead"></thead>
+                <tbody id="admin-tbody">
+                    <tr><td colspan="6" class="loading-box">正在同步云端数据...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/escape.js"></script>
+    <script>
+        const API_BASE = '';
+        let currentType = 'resource';
+
+        // 1. 初始化鉴权：本地 role 只是首屏快拦，以服务端 /api/auth/me 为准
+        (function initAdmin() {
+            const username = localStorage.getItem('username');
+            const deny = () => { alert('权限不足'); window.location.href = 'index.html'; };
+            if (localStorage.getItem('role') !== 'admin') return deny();
+            document.getElementById('userInfo').innerText = '👤 ' + (username || 'Admin');
+            initTheme();
+            loadData('resource'); // 默认加载
+            try {
+                const t = localStorage.getItem('token');
+                fetch('/api/auth/me', { headers: t ? { 'Authorization': 'Bearer ' + t } : {} })
+                    .then((r) => r.json()).then((j) => {
+                        if (!j || j.code !== 200 || j.data.role !== 'admin') deny();
+                    }).catch(() => deny());
+            } catch (_) { deny(); }
+        })();
+
+        // 2. 主题切换
+        function initTheme() {
+            const themeToggle = document.getElementById('themeToggle');
+            const html = document.documentElement;
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            html.setAttribute('data-theme', savedTheme);
+            themeToggle.textContent = savedTheme === 'light' ? '☀️' : '🌙';
+            themeToggle.onclick = () => {
+                const current = html.getAttribute('data-theme');
+                const next = current === 'light' ? 'dark' : 'light';
+                html.setAttribute('data-theme', next);
+                themeToggle.textContent = next === 'light' ? '☀️' : '🌙';
+                localStorage.setItem('theme', next);
+            };
+        }
+
+        // 3. 标签切换逻辑
+        function switchTab(type, btn) {
+            currentType = type;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            const config = {
+                'resource': ['📦 资源管理', '管理所有用户发布的资源文件。'],
+                'forum': ['📝 论坛帖子管理', '审核并处理社区内的技术讨论贴。'],
+                'comment': ['💬 吐槽言论管理', '维护实时交流区的环境。'],
+                'user': ['👥 用户管理', '管理注册用户及其系统访问权限。']
+            };
+            document.getElementById('current-title').innerText = config[type][0];
+            document.getElementById('current-desc').innerText = config[type][1];
+            loadData(type);
+        }
+
+        // 4. 数据加载核心
+        async function loadData(type) {
+            const tbody = document.getElementById('admin-tbody');
+            const thead = document.getElementById('admin-thead');
+            tbody.innerHTML = '<tr><td colspan="6" class="loading-box">加载中...</td></tr>';
+
+            try {
+                let url = '';
+                if (type === 'resource') url = `/api/resources`;
+                else if (type === 'forum') url = `/api/posts`;
+                else if (type === 'comment') url = `/api/comments`;
+                else if (type === 'user') url = `/api/users`;
+
+                const result = window.API
+                    ? await window.API.get(url, { page: 1, limit: 100 })
+                    : await fetch(url).then(r => r.json());
+                const data = result.data || [];
+                document.getElementById('stat-count').innerText = `总数: ${data.length}`;
+
+                renderTable(type, data);
+            } catch (err) {
+                tbody.innerHTML = '<tr><td colspan="6" class="loading-box" style="color:#ef4444">❌ 数据加载失败，请检查后端服务</td></tr>';
+            }
+        }
+
+        // 5. 渲染表格
+        function renderTable(type, data) {
+            const thead = document.getElementById('admin-thead');
+            const tbody = document.getElementById('admin-tbody');
+            const esc = (v) => (window.escapeHtml ? window.escapeHtml(v) : String(v == null ? '' : v));
+            const num = (v) => Number(v) || 0;
+
+            if (type === 'resource') {
+                thead.innerHTML = `<tr><th>标题</th><th>分类</th><th>上传者</th><th>时间</th><th>操作</th></tr>`;
+                tbody.innerHTML = data.map(item => `
+                    <tr>
+                        <td><b>${esc(item.title)}</b></td>
+                        <td><span class="badge-tag">${esc(item.category)}</span></td>
+                        <td>${esc(item.uploader)}</td>
+                        <td>${esc(new Date(item.upload_time).toLocaleDateString())}</td>
+                        <td><button class="del-btn" data-type="resource" data-id="${num(item.id)}">删除</button></td>
+                    </tr>
+                `).join('');
+            }
+            else if (type === 'forum') {
+                thead.innerHTML = `<tr><th>帖子标题</th><th>发布者</th><th>点赞</th><th>发布时间</th><th>操作</th></tr>`;
+                tbody.innerHTML = data.map(item => `
+                    <tr>
+                        <td>${esc(item.title)}</td>
+                        <td>${esc(item.username)}</td>
+                        <td>❤️ ${num(item.likes)}</td>
+                        <td>${esc(new Date(item.create_time).toLocaleDateString())}</td>
+                        <td><button class="del-btn" data-type="post" data-id="${num(item.id)}">删除</button></td>
+                    </tr>
+                `).join('');
+            }
+            else if (type === 'comment') {
+                thead.innerHTML = `<tr><th>内容</th><th>发布者</th><th>发布时间</th><th>操作</th></tr>`;
+                tbody.innerHTML = data.map(item => `
+                    <tr>
+                        <td style="max-width:300px">${esc(item.content)}</td>
+                        <td>${esc(item.username)}</td>
+                        <td>${esc(new Date(item.create_time).toLocaleString())}</td>
+                        <td><button class="del-btn" data-type="comment" data-id="${num(item.id)}">删除</button></td>
+                    </tr>
+                `).join('');
+            }
+            else if (type === 'user') {
+                thead.innerHTML = `<tr><th>ID</th><th>用户名</th><th>角色</th><th>操作</th></tr>`;
+                tbody.innerHTML = data.map(item => `
+                    <tr>
+                        <td>#${num(item.id)}</td>
+                        <td>${esc(item.username)}</td>
+                        <td><span class="badge-tag">${esc(item.role)}</span></td>
+                        <td>
+                            ${item.username !== 'admin' ? `<button class="del-btn" data-type="user" data-id="${esc(item.username)}">注销</button>
+                            <button class="del-btn" data-type="resetpw" data-id="${esc(item.username)}" style="margin-left:8px;">重置密码</button>` : '--'}
+                        </td>
+                    </tr>
+                `).join('');
+            }
+            tbody.querySelectorAll('.del-btn').forEach((b) => {
+                b.addEventListener('click', () => deleteItem(b.dataset.type, b.dataset.id));
+            });
+        }
+
+        // 6. 删除逻辑 (结合后端 API)
+        async function deleteItem(type, id) {
+            if (type === 'resetpw') return resetUserPassword(id);
+            if (!confirm('确定要执行删除操作吗？此操作不可逆！')) return;
+
+            try {
+                let url = '';
+                let method = 'DELETE';
+                let headers = window.API ? window.API.authHeaders() : {};
+
+                if (type === 'resource') url = `/api/resources/${id}`;
+                else if (type === 'post') url = `/api/posts/${id}`;
+                else if (type === 'user') url = `/api/users/${id}`;
+				else if (type === 'comment') url = `/api/comments/${id}`;
+				
+                const res = await fetch(url, { method, headers });
+                const result = await res.json();
+
+                if (result.code === 200) {
+                    alert('操作成功');
+                    loadData(currentType);
+                } else {
+                    alert(result.msg || '操作失败');
+                }
+            } catch (err) {
+                alert('网络错误，请稍后再试');
+            }
+        }
+
+        // 6b. 管理员协助重置用户密码（用户忘密时用；需当面核实身份后再操作）
+        async function resetUserPassword(username) {
+            const np = prompt(`为用户 [${username}] 设置临时密码（6-72位）：`);
+            if (np === null) return;
+            if (np.length < 6 || np.length > 72) { alert('临时密码需6-72位'); return; }
+            if (!confirm(`确认将 [${username}] 的密码重置为该临时密码？\n请一次性告知用户，并提醒其登录后立即改密。`)) return;
+            try {
+                const headers = Object.assign({ 'Content-Type': 'application/json' },
+                    window.API ? window.API.authHeaders() : {});
+                const res = await fetch(`/api/admin/users/${encodeURIComponent(username)}/password`, {
+                    method: 'PUT', headers, body: JSON.stringify({ newPassword: np })
+                });
+                const result = await res.json();
+                if (result.code === 200) alert('重置成功，临时密码：' + np + '\n请一次性告知用户并提醒其改密。');
+                else alert(result.msg || '操作失败');
+            } catch (_) { alert('网络错误，请稍后再试'); }
+        }
+
+        async function __doLogout(confirmMsg, target) {
+            if (!confirm(confirmMsg)) return;
+            try { await fetch('/api/logout', { method: 'POST' }); } catch (_) {}
+            localStorage.clear();
+            window.location.href = target || 'login.html';
+        }
+        function logout() {
+            __doLogout('确认退出管理员模式？');
+        }
+    </script>
+</body>
+</html>

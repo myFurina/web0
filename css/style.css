@@ -1,0 +1,342 @@
+/* =========================================
+   1. 主题变量：全站配色体系
+   ========================================= */
+:root {
+    /* 夜间模式（默认） */
+    --bg-color: #0f172a;
+    --card-bg: #1e293b;
+    --input-bg: #334155;
+    --primary-purple: #8b5cf6;
+    --accent-blue: #38bdf8;
+    --text-main: #f1f5f9;
+    --text-gray: #94a3b8;
+    --border-color: #334155;
+    --danger-red: #ef4444;
+    --success-green: #10b981;
+    --gradient-primary: linear-gradient(135deg, #8b5cf6, #38bdf8);
+}
+
+/* 日间模式 */
+[data-theme="light"] {
+    --bg-color: #f8fafc;
+    --card-bg: #ffffff;
+    --input-bg: #f1f5f9;
+    --primary-purple: #7c3aed;
+    --accent-blue: #0284c7;
+    --text-main: #1e293b; 
+    --text-gray: #64748b;
+    --border-color: #e2e8f0;
+    --danger-red: #dc2626;
+    --success-green: #059669;
+    --gradient-primary: linear-gradient(135deg, #7c3aed, #0284c7);
+}
+
+/* =========================================
+   2. 基础复位与全局样式
+   ========================================= */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { overflow-y: scroll; scroll-behavior: smooth; }
+
+body {
+    font-family: 'Inter', 'Microsoft YaHei', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    line-height: 1.6;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* =========================================
+   3. 头部导航栏 (响应式设计核心)
+   ========================================= */
+header {
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border-color);
+    padding: 0.8rem 0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    min-height: 70px;
+    display: flex;
+    align-items: center;
+}
+
+.header-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+}
+
+h1 { font-size: 1.5rem; letter-spacing: -1px; cursor: default; }
+h1 span {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: 800;
+}
+
+nav ul {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+nav a {
+    color: var(--text-gray);
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: 0.3s;
+    padding: 8px 4px;
+}
+
+nav a:hover, nav a.active {
+    color: var(--primary-purple);
+}
+
+/* 下拉菜单逻辑 */
+.nav-item { position: relative; }
+
+.dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0; /* 默认靠右对齐，防止小屏幕溢出 */
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 8px 0;
+    display: none;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    min-width: 100px;
+    z-index: 1001;
+}
+
+.has-dropdown:hover .dropdown { display: block; animation: fadeInQuick 0.2s ease-out; }
+
+.dropdown li { list-style: none; }
+.dropdown li a {
+    padding: 10px 20px;
+    display: block;
+    color: var(--text-main);
+    font-size: 0.9rem;
+}
+
+.dropdown li a:hover {
+    background: rgba(124, 58, 237, 0.1);
+    color: var(--primary-purple);
+}
+
+/* =========================================
+   4. 用户控件与按钮
+   ========================================= */
+.user-controls { display: flex; align-items: center; gap: 15px; }
+
+.user-badge {
+    background: var(--input-bg);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    border: 1px solid var(--border-color);
+    color: var(--accent-blue);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.theme-toggle {
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-main);
+    transition: 0.3s;
+}
+.theme-toggle:hover { transform: rotate(15deg) scale(1.1); }
+
+.btn-primary {
+    background: var(--gradient-primary);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.3s;
+}
+.btn-primary:hover { opacity: 0.9; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(124, 58, 237, 0.3); }
+
+/* =========================================
+   5. 论坛与内容布局 (修复看不清问题)
+   ========================================= */
+.container { max-width: 900px; margin: 2rem auto; padding: 0 20px; }
+
+/* 输入控件适配 */
+input, textarea {
+    width: 100%;
+    padding: 14px;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    color: var(--text-main); /* 关键修复点 */
+    font-size: 1rem;
+    font-family: inherit;
+    outline: none;
+    transition: 0.3s;
+}
+input:focus, textarea:focus { border-color: var(--primary-purple); box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1); }
+
+/* 帖子卡片样式 */
+.post-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    padding: 24px;
+    border-radius: 16px;
+    margin-bottom: 20px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+.post-card:hover { border-color: var(--primary-purple); transform: translateY(-3px); }
+
+.post-title {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--text-main); /* 关键修复点 */
+    margin: 10px 0;
+    display: block;
+}
+
+.meta { font-size: 0.85rem; color: var(--text-gray); display: flex; align-items: center; gap: 10px; }
+
+/* =========================================
+   6. 移动端响应式补丁 (修复导航溢出)
+   ========================================= */
+@media (max-width: 768px) {
+    header {
+        height: 60px;
+        padding: 0;
+        position: relative;
+    }
+
+    .header-container {
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 0 10px;
+        height: 100%;
+        overflow: visible;
+    }
+
+    h1 {
+        font-size: 1.1rem !important;
+        white-space: nowrap;
+    }
+
+    nav {
+        flex: 1;
+        margin-left: 10px;
+        overflow-x: visible;
+        overflow-y: visible;
+        scrollbar-width: none;
+        height: 140%;
+        display: flex;
+        align-items: center;
+    }
+    
+    nav::-webkit-scrollbar {
+        display: none;
+    }
+
+    nav ul {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 8px;
+        align-items: center;
+        padding: 0 5px;
+        width: max-content;
+        height: 100%;
+    }
+
+    .nav-item {
+        position: relative;
+        height: 100%;
+        display: flex;
+        align-items: center;
+    }
+
+    nav a {
+        font-size: 0.8rem;
+        padding: 6px 8px;
+        white-space: nowrap;
+    }
+
+    .dropdown {
+        position: absolute;
+        top: calc(70% );
+        left: 0;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 8px 0;
+        display: none;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        min-width: 60px;
+        z-index: 1002;
+    }
+
+    /* 右侧菜单下拉靠右 */
+    .user-controls .dropdown {
+        left: auto;
+        right: 0;
+    }
+
+    .has-dropdown:hover .dropdown {
+        display: block;
+    }
+
+    .user-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+    }
+
+    .user-badge {
+        padding: 4px 8px;
+        font-size: 0.75rem;
+        white-space: nowrap;
+    }
+
+    #themeToggle {
+        width: 32px;
+        height: 32px;
+        font-size: 0.9rem;
+        flex-shrink: 0;
+    }
+
+    .container, .admin-container {
+        width: 100% !important;
+        margin: 10px auto;
+        padding: 0 12px;
+    }
+
+    .post-card {
+        padding: 15px;
+        margin-bottom: 12px;
+    }
+    
+    input, textarea, select {
+        font-size: 16px;
+    }
+}
+@keyframes fadeInQuick { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }

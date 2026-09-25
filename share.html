@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分享技术力量 - TechShare</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* ... 保留原有样式 ... */
+        
+        /* 文件上传区域样式 */
+        .file-upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: var(--input-bg);
+        }
+        
+        .file-upload-area:hover {
+            border-color: var(--primary-purple);
+            background: rgba(79, 70, 229, 0.05);
+        }
+        
+        .file-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(79, 70, 229, 0.1);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            word-break: break-all;
+        }
+        
+        .file-size {
+            color: var(--text-gray);
+            font-size: 0.8rem;
+            margin-top: 5px;
+        }
+        
+        /* 上传进度条 */
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: var(--border-color);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-purple), var(--accent-blue));
+            width: 0%;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <!-- 头部保持不变 -->
+        <div class="header-container">
+            <h1>🌀 Tech<span>Share</span></h1>
+            <nav>
+                <ul>
+                    <li><a href="index.html">首页</a></li>
+                    <li class="nav-item has-dropdown">
+                        <a href="javascript:;" class="active">资源共享▾</a>
+                        <ul class="dropdown">
+                            <li><a href="source.html">资源查看</a></li>
+                            <li><a href="share.html">资源发布</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item has-dropdown">
+                        <a href="javascript:;">交流社区▾</a>
+                        <ul class="dropdown">
+                            <li><a href="talk.html">前往吐槽</a></li>
+                            <li><a href="forum.html">前往论坛</a></li>
+                        </ul>
+                    </li>
+                    <li id="adminEntrance" style="display:none;">
+                        <a href="admin.html" style="font-weight:bold;">⚙️ 管理后台</a>
+                    </li>
+                    <li class="user-controls nav-item has-dropdown">
+                        <a href="javascript:;"><span id="userInfo" class="user-badge"></span></a>
+                        <ul class="dropdown">
+                            <li><a href="mine.html">️个人中心</a></li>
+                        </ul>
+                    </li>
+                    <li class="user-controls">
+                        <span id="logoutBtn" style="display:none;">
+                            <a href="javascript:void(0)" onclick="logout()" class="logout-link">退出</a>
+                        </span>
+                    </li>
+                    <button id="themeToggle" class="theme-toggle">🌙</button>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="form-card">
+            <div class="form-header">
+                <h2>📁 分享技术资源</h2>
+                <p>上传文件或文档，让知识流动起来</p>
+            </div>
+            
+            <form id="shareForm" class="modern-form" enctype="multipart/form-data">
+                <div class="input-group">
+                    <label>资源标题 *</label>
+                    <input type="text" id="title" placeholder="例如：MySQL 性能优化实战指南" required>
+                </div>
+                
+                <div class="input-row">
+                    <div class="input-group">
+                        <label>所属分类 *</label>
+                        <select id="category" required>
+                            <option value="">请选择分类</option>
+                            <option value="前端开发">前端开发</option>
+                            <option value="后端技术">后端技术</option>
+                            <option value="移动端">移动端</option>
+                            <option value="数据库">数据库</option>
+                            <option value="算法/AI">算法 / AI</option>
+                            <option value="电子书">电子书/文档</option>
+                            <option value="工具软件">工具软件</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>发布人</label>
+                        <input type="text" id="uploader" readonly>
+                    </div>
+                </div>
+
+                <!-- 文件上传区域（替代链接输入框） -->
+                <div class="input-group">
+                    <label>上传资源文件 *</label>
+                    <div class="file-upload-area" onclick="document.getElementById('resourceFile').click()">
+                        <div>📂 点击选择文件</div>
+                        <div style="font-size: 0.8rem; margin-top: 8px;">除网页脚本外的格式均可（html/svg/js/php/exe 等除外）</div>
+                        <div style="font-size: 0.7rem; color: var(--text-gray); margin-top: 5px;">最大 50MB · <span id="quotaInfo">用量加载中…</span> · 下载时请注意文件来源</div>
+                    </div>
+                    <input type="file" id="resourceFile" style="display: none">
+                    <div id="fileInfo" class="file-info" style="display: none;">
+                        <div>📄 <span id="fileName"></span></div>
+                        <div class="file-size" id="fileSize"></div>
+                        <div style="margin-top:8px;"><button type="button" id="removeFileBtn" class="secondary-btn" style="padding:4px 12px;">✕ 移除重选</button></div>
+                    </div>
+                    <div class="progress-bar" id="progressBar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+
+                <!-- 可选：资源描述 -->
+                <div class="input-group">
+                    <label>资源描述（可选）</label>
+                    <textarea id="description" rows="3" placeholder="简单介绍一下这个资源的内容和用途..." style="width: 100%; padding: 12px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-main);"></textarea>
+                </div>
+
+                <button type="submit" class="primary-btn" id="submitBtn">立即发布资源</button>
+            </form>
+        </section>
+    </main>
+
+   
+
+    <script src="js/api.js"></script>
+    <script src="js/escape.js"></script>
+    <script>
+        let selectedFile = null;
+        
+        // 初始化
+        (function initSharePage() {
+            const username = localStorage.getItem('username');
+            const role = localStorage.getItem('role');
+            const isLogin = localStorage.getItem('isLogin');
+
+            if (isLogin !== 'true') {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            document.getElementById('uploader').value = username || '未知用户';
+            document.getElementById('userInfo').innerText = '👤 ' + (username || '用户');
+            document.getElementById('logoutBtn').style.display = 'inline';
+
+            if (role === 'admin') {
+                document.getElementById('adminEntrance').style.display = 'block';
+            }
+
+            // 配额展示（失败不挡发布，后端是最终闸）
+            (async () => {
+                try {
+                    const headers = window.API ? window.API.authHeaders() : {};
+                    const r = await fetch('/api/user/quota', { headers }).then((x) => x.json());
+                    if (r.code === 200) {
+                        const fmt = (b) => b >= 1073741824 ? (b / 1073741824).toFixed(2) + 'GB' : Math.ceil(b / 1048576) + 'MB';
+                        document.getElementById('quotaInfo').textContent =
+                            r.data.quota ? `已用 ${fmt(r.data.used)} / ${fmt(r.data.quota)}` : `已用 ${fmt(r.data.used)}（不限额）`;
+                    } else document.getElementById('quotaInfo').textContent = '';
+                } catch (_) { document.getElementById('quotaInfo').textContent = ''; }
+            })();
+        })();
+
+        // 文件选择处理
+        document.getElementById('resourceFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // 文件大小验证（50MB）
+            const maxSize = 50 * 1024 * 1024;
+            if (file.size > maxSize) {
+                alert('文件太大，不能超过 50MB');
+                this.value = '';
+                document.getElementById('fileInfo').style.display = 'none';
+                selectedFile = null;
+                return;
+            }
+            
+            // 显示文件信息
+            selectedFile = file;
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = formatFileSize(file.size);
+            document.getElementById('fileInfo').style.display = 'block';
+            document.getElementById('progressBar').style.display = 'none';
+            document.getElementById('progressFill').style.width = '0%';
+        });
+
+        // 上传前移除已选文件（选错可删，不用刷新页面）
+        document.getElementById('removeFileBtn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            document.getElementById('resourceFile').value = '';
+            selectedFile = null;
+            document.getElementById('fileInfo').style.display = 'none';
+            document.getElementById('progressBar').style.display = 'none';
+        });
+        
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // 更新进度条
+        function updateProgress(percent) {
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+            progressBar.style.display = 'block';
+            progressFill.style.width = percent + '%';
+        }
+        
+        // 提交逻辑（文件上传）
+        document.getElementById('shareForm').onsubmit = async function(e) {
+            e.preventDefault();
+            
+            const title = document.getElementById('title').value.trim();
+            const category = document.getElementById('category').value;
+            const description = document.getElementById('description').value.trim();
+            
+            // 验证
+            if (!title) {
+                alert('请输入资源标题');
+                return;
+            }
+            if (!category) {
+                alert('请选择资源分类');
+                return;
+            }
+            if (!selectedFile) {
+                alert('请选择要上传的资源文件');
+                return;
+            }
+            
+            const btn = document.getElementById('submitBtn');
+            const originalText = btn.innerText;
+            btn.innerText = '上传中...';
+            btn.disabled = true;
+            
+            // 优先 R2 预签名直传（不占服务器带宽），失败自动回落传统上传；都带进度条
+            updateProgress(2);
+            try {
+                const result = await window.API.uploadResource(
+                    { title, category, description, uploader: document.getElementById('uploader').value },
+                    selectedFile,
+                    updateProgress
+                );
+                if (result && result.code === 200) {
+                    updateProgress(100);
+                    alert('🎉 发布成功！资源已上传，感谢您的贡献。');
+                    window.location.href = 'source.html';
+                } else {
+                    throw new Error((result && result.msg) || '上传失败');
+                }
+            } catch (err) {
+                console.error('上传失败:', err);
+                alert('发布失败：' + (err.message || '请重试'));
+                btn.innerText = originalText;
+                btn.disabled = false;
+                document.getElementById('progressBar').style.display = 'none';
+            }
+        };
+
+        async function __doLogout(confirmMsg, target) {
+            if (!confirm(confirmMsg)) return;
+            try { await fetch('/api/logout', { method: 'POST' }); } catch (_) {}
+            localStorage.clear();
+            window.location.href = target || 'login.html';
+        }
+        function logout() {
+            __doLogout('确定要退出登录吗？');
+        }
+        
+        // 主题切换
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            html.setAttribute('data-theme', savedTheme);
+            themeToggle.textContent = savedTheme === 'light' ? '☀️' : '🌙';
+        }
+        themeToggle.addEventListener('click', () => {
+            const current = html.getAttribute('data-theme');
+            if (current === 'light') {
+                html.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                html.setAttribute('data-theme', 'light');
+                themeToggle.textContent = '☀️';
+                localStorage.setItem('theme', 'light');
+            }
+        });
+    </script>
+</body>
+</html>
